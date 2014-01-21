@@ -58,7 +58,7 @@ namespace Mag14.Controllers
         }
         
         [HttpGet]
-        public async Task<IEnumerable<Lesson>> Search(
+        public async Task<PagedList<Lesson>> Search(
             string keyword=null, 
             bool inContent=false, 
             string discipline=null, 
@@ -72,6 +72,7 @@ namespace Mag14.Controllers
             string orderBy="PublishDate",
             string orderDir="ASC")
         {
+            PagedList<Lesson> page = new PagedList<Lesson>();
             IQueryable<Lesson> lessons = db.Lessons;
 
             if (!String.IsNullOrEmpty(keyword))
@@ -94,6 +95,12 @@ namespace Mag14.Controllers
                 lessons = lessons.Where(l => l.PublishDate.Equals(DateTime.Parse(publishedOn)));
             if (!String.IsNullOrEmpty(publishedBy))
                 lessons = lessons.Where(l => (l.Author.Name + l.Author.Surname).Contains(publishedBy));
+
+            //if (startRow == 0)
+            page.Count = lessons.Count();
+            page.StartRow = startRow;
+            page.PageSize = pageSize;
+
             /*
             if (orderDir.Equals("DESC"))
                 lessons = lessons.OrderByDescending(getLessonField(orderBy)).Skip(startRow).Take(pageSize).AsQueryable();
@@ -103,12 +110,62 @@ namespace Mag14.Controllers
             lessons = lessons.OrderBy(orderBy + " " +orderDir).Skip(startRow).Take(pageSize);
             //lessons = lessons.Skip(startRow).Take(pageSize);
 
+            page.Records = await lessons.ToListAsync<Lesson>();
+
+            return page;
+            //return await db.Lessons.Where(l => l.Discipline.Equals(discipline)).ToListAsync<Lesson>();
+
+            //return await db.Lessons.Where(l => l.Discipline.Equals(discipline)).ToListAsync<Lesson>();
+        }
+
+/*
+        [HttpGet]
+        public async Task<IEnumerable<Lesson>> Search(
+            string keyword = null,
+            bool inContent = false,
+            string discipline = null,
+            string school = null,
+            string classroom = null,
+            int rate = -1,
+            string publishedOn = null,
+            string publishedBy = null,
+            int startRow = 0,
+            int pageSize = 99999,
+            string orderBy = "PublishDate",
+            string orderDir = "ASC")
+        {
+            IQueryable<Lesson> lessons = db.Lessons;
+
+            if (!String.IsNullOrEmpty(keyword))
+            {
+                if (inContent)
+                    lessons = lessons.Where(l => l.Content.Contains(keyword) || l.Conclusion.Contains(keyword));
+                else
+                    lessons = lessons.Where(l => l.Title.Contains(keyword));
+
+            }
+            if (!String.IsNullOrEmpty(discipline))
+                lessons = lessons.Where(l => l.Discipline.Contains(discipline));
+            if (!String.IsNullOrEmpty(school))
+                lessons = lessons.Where(l => l.School.Contains(school));
+            if (!String.IsNullOrEmpty(classroom))
+                lessons = lessons.Where(l => l.Classroom.Contains(classroom));
+            if (rate > -1)
+                lessons = lessons.Where(l => l.Rate.Equals(rate));
+            if (!String.IsNullOrEmpty(publishedOn))
+                lessons = lessons.Where(l => l.PublishDate.Equals(DateTime.Parse(publishedOn)));
+            if (!String.IsNullOrEmpty(publishedBy))
+                lessons = lessons.Where(l => (l.Author.Name + l.Author.Surname).Contains(publishedBy));
+
+            lessons = lessons.OrderBy(orderBy + " " + orderDir).Skip(startRow).Take(pageSize);
+            //lessons = lessons.Skip(startRow).Take(pageSize);
+
             return await lessons.ToListAsync<Lesson>();
             //return await db.Lessons.Where(l => l.Discipline.Equals(discipline)).ToListAsync<Lesson>();
 
             //return await db.Lessons.Where(l => l.Discipline.Equals(discipline)).ToListAsync<Lesson>();
         }
-        
+*/
 
         
 
