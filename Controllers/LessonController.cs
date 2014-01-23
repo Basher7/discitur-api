@@ -56,7 +56,40 @@ namespace Mag14.Controllers
             }
             return orderByFunc;
         }
-        
+
+
+        [HttpGet]
+        public async Task<List<string>> FindDiscipline(string disciplineQ)
+        {
+            //List<string> disciplines = new List<string>();
+            IQueryable<string> disciplines = db.Lessons
+                                                .Where(l => l.Discipline.Contains(disciplineQ))
+                                                .Select(l => l.Discipline).Distinct();
+
+            return await disciplines.ToListAsync();
+            //var results = (from lesson in db.Lessons select lesson.Discipline).Distinct();
+        }
+
+        [HttpGet]
+        public async Task<List<string>> FindSchool(string schoolQ)
+        {
+            IQueryable<string> schools = db.Lessons
+                                                .Where(l => l.School.Contains(schoolQ))
+                                                .Select(l => l.School).Distinct();
+
+            return await schools.ToListAsync();
+        }
+
+        [HttpGet]
+        public async Task<List<string>> FindClassRoom(string classRoomQ)
+        {
+            IQueryable<string> classRooms = db.Lessons
+                                                .Where(l => l.Classroom.Contains(classRoomQ))
+                                                .Select(l => l.Classroom).Distinct();
+
+            return await classRooms.ToListAsync();
+        }
+
         [HttpGet]
         public async Task<PagedList<Lesson>> Search(
             string keyword=null, 
