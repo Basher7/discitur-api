@@ -91,6 +91,29 @@ namespace Mag14.Controllers
         }
 
         [HttpGet]
+        public async Task<List<string>> FindTags(string tagQ)
+        {
+            IQueryable<string> tags = db.LessonTags
+                                                .Where(l => l.LessonTagName.Contains(tagQ))
+                                                .Select(l => l.LessonTagName).Distinct();
+
+            return await tags.ToListAsync();
+        }
+
+
+        [NonAction]
+        private List<string> GetQueryArrayParameters(string arrayValuesQueryString)
+        {
+            var retval = new List<string>();
+            foreach (var item in arrayValuesQueryString.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                //var split = item.Split('=');
+                retval.Add(item);
+            }
+            return retval;
+        }
+
+        [HttpGet]
         public async Task<PagedList<Lesson>> Search(
             string keyword=null, 
             bool inContent=false, 
@@ -98,6 +121,7 @@ namespace Mag14.Controllers
             string school=null, 
             string classroom=null, 
             int rate=-1, 
+            string tags=null,
             string publishedOn=null, 
             string publishedBy=null,
             int startRow=0,
@@ -117,13 +141,29 @@ namespace Mag14.Controllers
 
             }
             if (!String.IsNullOrEmpty(discipline))
-                lessons = lessons.Where(l => l.Discipline.Contains(discipline));
+                lessons = lessons.Where(l => l.Discipline.Equals(discipline));
             if (!String.IsNullOrEmpty(school))
-                lessons = lessons.Where(l => l.School.Contains(school));
+                lessons = lessons.Where(l => l.School.Equals(school));
             if (!String.IsNullOrEmpty(classroom))
-                lessons = lessons.Where(l => l.Classroom.Contains(classroom));
+                lessons = lessons.Where(l => l.Classroom.Equals(classroom));
             if (rate>-1)
                 lessons = lessons.Where(l => l.Rate.Equals(rate));
+            if (!String.IsNullOrEmpty(tags))
+            {
+                foreach (string tag in GetQueryArrayParameters(tags))
+                {
+                    lessons = lessons.Where(l => l.Tags.Any(t => t.LessonTagName.Equals(tag)));
+                }
+                /*
+                lessons = lessons.Include(l => l.Tags);
+                foreach (string tag in GetQueryArrayParameters(tags))
+                {
+                    var query = from l in lessons
+                                select new { Lesson = l, Tag = l.Tags.Where(t => t.LessonTagName.Equals(tag))};
+                    lessons = query.AsQueryable().Select(p => p.Lesson);
+                }
+                */
+            }
             if (!String.IsNullOrEmpty(publishedOn))
                 lessons = lessons.Where(l => l.PublishDate.Equals(DateTime.Parse(publishedOn)));
             if (!String.IsNullOrEmpty(publishedBy))
@@ -150,57 +190,6 @@ namespace Mag14.Controllers
 
             //return await db.Lessons.Where(l => l.Discipline.Equals(discipline)).ToListAsync<Lesson>();
         }
-
-/*
-        [HttpGet]
-        public async Task<IEnumerable<Lesson>> Search(
-            string keyword = null,
-            bool inContent = false,
-            string discipline = null,
-            string school = null,
-            string classroom = null,
-            int rate = -1,
-            string publishedOn = null,
-            string publishedBy = null,
-            int startRow = 0,
-            int pageSize = 99999,
-            string orderBy = "PublishDate",
-            string orderDir = "ASC")
-        {
-            IQueryable<Lesson> lessons = db.Lessons;
-
-            if (!String.IsNullOrEmpty(keyword))
-            {
-                if (inContent)
-                    lessons = lessons.Where(l => l.Content.Contains(keyword) || l.Conclusion.Contains(keyword));
-                else
-                    lessons = lessons.Where(l => l.Title.Contains(keyword));
-
-            }
-            if (!String.IsNullOrEmpty(discipline))
-                lessons = lessons.Where(l => l.Discipline.Contains(discipline));
-            if (!String.IsNullOrEmpty(school))
-                lessons = lessons.Where(l => l.School.Contains(school));
-            if (!String.IsNullOrEmpty(classroom))
-                lessons = lessons.Where(l => l.Classroom.Contains(classroom));
-            if (rate > -1)
-                lessons = lessons.Where(l => l.Rate.Equals(rate));
-            if (!String.IsNullOrEmpty(publishedOn))
-                lessons = lessons.Where(l => l.PublishDate.Equals(DateTime.Parse(publishedOn)));
-            if (!String.IsNullOrEmpty(publishedBy))
-                lessons = lessons.Where(l => (l.Author.Name + l.Author.Surname).Contains(publishedBy));
-
-            lessons = lessons.OrderBy(orderBy + " " + orderDir).Skip(startRow).Take(pageSize);
-            //lessons = lessons.Skip(startRow).Take(pageSize);
-
-            return await lessons.ToListAsync<Lesson>();
-            //return await db.Lessons.Where(l => l.Discipline.Equals(discipline)).ToListAsync<Lesson>();
-
-            //return await db.Lessons.Where(l => l.Discipline.Equals(discipline)).ToListAsync<Lesson>();
-        }
-*/
-
-        
 
         // GET api/Lesson/5
         [ResponseType(typeof(Lesson))]
@@ -279,21 +268,6 @@ namespace Mag14.Controllers
 
             return Ok(lesson);
         }
-
-        /*
-        [Route("search")]
-        public IQueryable<Lesson> Search(string discipline = null, string school = null, string longitude = null)
-        {
-
-            Lesson lesson = db.Lessons.S;
-            if (lesson == null)
-            {
-                return NotFound();
-            }
-
-            return Ok(lesson);
-        }
-        */
 
 
         protected override void Dispose(bool disposing)
