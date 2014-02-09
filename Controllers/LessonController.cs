@@ -57,7 +57,6 @@ namespace Mag14.Controllers
             return orderByFunc;
         }
 
-
         [HttpGet]
         public async Task<List<string>> FindDiscipline(string disciplineQ)
         {
@@ -168,6 +167,9 @@ namespace Mag14.Controllers
                 lessons = lessons.Where(l => l.PublishDate.Equals(DateTime.Parse(publishedOn)));
             if (!String.IsNullOrEmpty(publishedBy))
                 lessons = lessons.Where(l => (l.Author.Name + l.Author.Surname).Contains(publishedBy));
+            
+            // Only published lessons are returned
+            lessons = lessons.Where(l => l.Published.Equals(Constants.LESSON_PUBLISHED));
 
             //if (startRow == 0)
             page.Count = lessons.Count();
@@ -267,6 +269,15 @@ namespace Mag14.Controllers
             await db.SaveChangesAsync();
 
             return Ok(lesson);
+        }
+
+        [Route("api/lesson/{lessonId}/comments")]
+        [HttpGet]
+        public async Task<List<LessonComment>> GetCommentsByLessonId(int lessonId)
+        {
+            IQueryable<LessonComment> comments = db.LessonComments
+                                        .Where(l => l.LessonId.Equals(lessonId));
+            return await comments.ToListAsync();
         }
 
 

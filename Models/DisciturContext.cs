@@ -26,5 +26,7 @@ namespace Mag14.Models
         public System.Data.Entity.DbSet<Mag14.discitur.Models.LessonFeedback> LessonFeedbacks { get; set; }
 
         public System.Data.Entity.DbSet<Mag14.discitur.Models.LessonTag> LessonTags { get; set; }
+
+        public System.Data.Entity.DbSet<Mag14.discitur.Models.LessonComment> LessonComments { get; set; }
     }
 }

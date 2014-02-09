@@ -36,8 +36,13 @@ namespace Mag14.discitur.Models
         [Required]
         public string Content { get; set; }
         public string Conclusion { get; set; }
+        public int Published { get; set; }
 
+        // Lazy loading of Tags
         public virtual ICollection<LessonTag> Tags { get; private set; }
+        // Lazy loading of Feedbacks
         public virtual ICollection<LessonFeedback> FeedBacks { get; private set; }
+        // Lazy loading of Comments
+        // public virtual ICollection<LessonComment> Comments { get; private set; }
     }
 }
