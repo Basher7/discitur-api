@@ -280,6 +280,51 @@ namespace Mag14.Controllers
             return await comments.ToListAsync();
         }
 
+        // POST api/lesson
+        [Route("api/lesson/{lessonId}/comment")]
+        [HttpPost]
+        [ResponseType(typeof(LessonComment))]
+        public async Task<IHttpActionResult> PostLessonComment(LessonComment comment)
+        {
+            LessonComment _comment = new LessonComment();
+            _comment.Content = comment.Content;
+            _comment.CreationDate = DateTime.Now;
+            _comment.Date = DateTime.Now;
+            _comment.LastModifDate = DateTime.Now;
+            _comment.LessonId = comment.LessonId;
+            _comment.Level = comment.Level;
+            _comment.ParentId = comment.ParentId;
+            _comment.RecordState = 0;
+            _comment.UserId = comment.Author.UserId;
+            try
+            {
+                _comment.Author = await db.Users.FindAsync(comment.Author.UserId);
+                _comment.LastModifUser = _comment.Author.UserName;
+            }
+            catch(Exception e){
+                return BadRequest(e.Message);
+            }
+
+            //if (!ModelState.IsValid)
+            //{
+            //    return BadRequest(ModelState);
+            //}
+
+            db.LessonComments.Add(_comment);
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+
+            return Ok(_comment);
+            //return CreatedAtRoute("DefaultApi", new { id = comment.Id }, comment);
+        }
+
+
 
         protected override void Dispose(bool disposing)
         {

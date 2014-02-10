@@ -32,6 +32,8 @@ namespace Mag14.discitur.Models
         [Required]
         public DateTime LastModifDate { get; set; }
         [Required]
+        public string LastModifUser { get; set; }
+        [Required]
         public int Vers { get; set; }
         [Required]
         public int RecordState { get; set; }
