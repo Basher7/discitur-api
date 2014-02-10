@@ -16,6 +16,7 @@ namespace Mag14.discitur.Models
         public string Email { get; set; }
         [Required]
         public string UserName { get; set; }
+        public string Picture { get; set; }
 
     }
 }

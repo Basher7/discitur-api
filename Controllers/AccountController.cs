@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Data;
+using System.Data.Entity;
+using System.Data.Entity.Infrastructure;
 using System.Net.Http;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -16,6 +19,7 @@ using Microsoft.Owin.Security.OAuth;
 using Mag14.Models;
 using Mag14.Result;
 using Mag14.Providers;
+using System.Web.Http.Description;
 
 namespace Mag14.Controllers
 {
@@ -24,6 +28,9 @@ namespace Mag14.Controllers
     public class AccountController : ApiController
     {
         private const string LocalLoginProvider = "Local";
+
+        private DisciturContext db = new DisciturContext();
+
 
         public AccountController()
             : this(Startup.UserManagerFactory(), Startup.OAuthOptions.AccessTokenFormat)
@@ -53,6 +60,16 @@ namespace Mag14.Controllers
                 HasRegistered = externalLogin == null,
                 LoginProvider = externalLogin != null ? externalLogin.LoginProvider : null
             };
+        }
+
+        [HostAuthentication(DefaultAuthenticationTypes.ExternalBearer)]
+        [Route("UserInfo2")]
+        public async Task<Mag14.discitur.Models.User> GetUserInfo2()
+        {
+            ExternalLoginData externalLogin = ExternalLoginData.FromIdentity(User.Identity as ClaimsIdentity);
+
+            string userName = User.Identity.GetUserName();
+            return await db.Users.Where(u => u.UserName.Equals(userName)).FirstAsync<Mag14.discitur.Models.User>();
         }
 
         // POST api/Account/Logout
