@@ -281,6 +281,7 @@ namespace Mag14.Controllers
         }
 
         // POST api/lesson
+        [Authorize]
         [Route("api/lesson/{lessonId}/comment")]
         [HttpPost]
         [ResponseType(typeof(LessonComment))]
