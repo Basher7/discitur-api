@@ -276,7 +276,7 @@ namespace Mag14.Controllers
         public async Task<List<LessonComment>> GetCommentsByLessonId(int lessonId)
         {
             IQueryable<LessonComment> comments = db.LessonComments
-                                        .Where(l => l.LessonId.Equals(lessonId));
+                                        .Where(c => c.LessonId.Equals(lessonId) && c.RecordState.Equals(Constants.RECORD_STATE_ACTIVE));
             return await comments.ToListAsync();
         }
 
@@ -295,7 +295,8 @@ namespace Mag14.Controllers
             _comment.LessonId = comment.LessonId;
             _comment.Level = comment.Level;
             _comment.ParentId = comment.ParentId;
-            _comment.RecordState = 0;
+            _comment.Vers = 1;
+            _comment.RecordState = Constants.RECORD_STATE_ACTIVE;
             _comment.UserId = comment.Author.UserId;
             try
             {
@@ -324,6 +325,77 @@ namespace Mag14.Controllers
             return Ok(_comment);
             //return CreatedAtRoute("DefaultApi", new { id = comment.Id }, comment);
         }
+
+
+        // PUT api/lesson/3/comment/13
+        [Authorize]
+        [Route("api/lesson/{lessonId}/comment/{id}")]
+        [HttpPut]
+        [ResponseType(typeof(LessonComment))]
+        public async Task<IHttpActionResult> PutLessonComment(int id, LessonComment comment)
+        {
+            LessonComment _comment = await db.LessonComments.FindAsync(id);
+            _comment.Content = comment.Content;
+            _comment.Date = DateTime.Now;
+            _comment.LastModifDate = DateTime.Now;
+            _comment.Vers += 1;
+
+            db.Entry(_comment).State = EntityState.Modified;
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+
+            return Ok(_comment);
+        }
+
+        // PUT api/lesson/3/comment/13/delete
+        [Authorize]
+        [Route("api/lesson/{lessonId}/comment/{id}/delete")]
+        [HttpPut]
+        [ResponseType(typeof(LessonComment))]
+        public async Task<IHttpActionResult> DeleteLessonComment(int id, LessonComment comment)
+        {
+            // Search for child comments, if exists the comment can't be deleted
+            IQueryable<LessonComment> comments = db.LessonComments
+                                        .Where(c => (c.ParentId.HasValue && c.ParentId.Value.Equals(id)) && c.RecordState.Equals(Constants.RECORD_STATE_ACTIVE));
+            int count = await comments.CountAsync();
+            if (count == 0)
+            {
+                LessonComment _comment = await db.LessonComments.FindAsync(id);
+                if (_comment == null)
+                {
+                    return NotFound();
+                }
+                _comment.LastModifDate = DateTime.Now;
+                _comment.LastModifUser = comment.Author.UserName;
+                _comment.RecordState = Constants.RECORD_STATE_DELETED;
+
+                db.Entry(_comment).State = EntityState.Modified;
+                try
+                {
+                    await db.SaveChangesAsync();
+                }
+                catch (Exception e)
+                {
+                    return BadRequest(e.Message);
+                }
+
+                return Ok(_comment);
+
+            }
+            else
+            {
+                return BadRequest("comment linked by other user's comments");
+            }
+        }
+
+
+
 
 
 
