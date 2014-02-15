@@ -47,6 +47,7 @@ namespace Mag14.Controllers
         public UserManager<IdentityUser> UserManager { get; private set; }
         public ISecureDataFormat<AuthenticationTicket> AccessTokenFormat { get; private set; }
 
+        /*
         // GET api/Account/UserInfo
         [HostAuthentication(DefaultAuthenticationTypes.ExternalBearer)]
         [Route("UserInfo")]
@@ -61,10 +62,11 @@ namespace Mag14.Controllers
                 LoginProvider = externalLogin != null ? externalLogin.LoginProvider : null
             };
         }
+        */
 
         [HostAuthentication(DefaultAuthenticationTypes.ExternalBearer)]
-        [Route("UserInfo2")]
-        public async Task<Mag14.discitur.Models.User> GetUserInfo2()
+        [Route("UserInfo")]
+        public async Task<Mag14.discitur.Models.User> GetUserInfo()
         {
             ExternalLoginData externalLogin = ExternalLoginData.FromIdentity(User.Identity as ClaimsIdentity);
 
