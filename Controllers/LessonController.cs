@@ -396,6 +396,183 @@ namespace Mag14.Controllers
 
 
 
+        /**** Lesson Ratings ****/
+
+        [Route("api/lesson/{lessonId}/ratings")]
+        [HttpGet]
+        public async Task<List<LessonRating>> GetRatingsByLessonId(int lessonId)
+        {
+            IQueryable<LessonRating> ratings = db.LessonRatings
+                                        .Where(r => r.LessonId.Equals(lessonId) && r.RecordState.Equals(Constants.RECORD_STATE_ACTIVE));
+            return await ratings.ToListAsync();
+        }
+
+        // POST api/lesson/5/rating
+        [Authorize]
+        [Route("api/lesson/{lessonId}/rating")]
+        [HttpPost]
+        [ResponseType(typeof(LessonRating))]
+        public async Task<IHttpActionResult> PostLessonRating(LessonRating rating)
+        {
+            // Search for Rating submitted by the same Author on the same Lesson
+            IQueryable<LessonRating> ratings = db.LessonRatings
+                                        .Where(r => r.UserId.Equals(rating.Author.UserId) && 
+                                            r.LessonId.Equals(rating.LessonId) &&
+                                            r.RecordState.Equals(Constants.RECORD_STATE_ACTIVE));
+            int count = await ratings.CountAsync();
+            if (count == 0)
+            {
+                LessonRating _rating = new LessonRating();
+                _rating.LessonId = rating.LessonId;
+                _rating.UserId = rating.Author.UserId;
+                _rating.Rating = rating.Rating;
+                _rating.Content = rating.Content ?? string.Empty;
+                _rating.CreationDate = DateTime.Now;
+                _rating.LastModifDate = DateTime.Now;
+                _rating.Vers = 1;
+                _rating.RecordState = Constants.RECORD_STATE_ACTIVE;
+                try
+                {
+                    _rating.Author = await db.Users.FindAsync(rating.Author.UserId);
+                    _rating.LastModifUser = _rating.Author.UserName;
+                }
+                catch (Exception e)
+                {
+                    return BadRequest(e.Message);
+                }
+                // Add new Lesson's Rating
+                db.LessonRatings.Add(_rating);
+
+                // Update Lesson Rating with Average of Ratings on the same Lesson
+                IQueryable<int> _prevRatings = db.LessonRatings
+                                            .Where(r => r.LessonId.Equals(rating.LessonId) &&
+                                                r.RecordState.Equals(Constants.RECORD_STATE_ACTIVE))
+                                            .Select(r => r.Rating);
+                List<int> _RatingsList = await _prevRatings.ToListAsync();
+                _RatingsList.Add(_rating.Rating);
+
+                Lesson _lesson = await db.Lessons.FindAsync(rating.LessonId);
+                _lesson.Rate = Math.Max((int)Math.Round(_RatingsList.Average()), 1);
+
+                //TODO: insert table fields for history and versioning
+                db.Entry(_lesson).State = EntityState.Modified;
+                
+                try
+                {
+                    await db.SaveChangesAsync();
+                }
+                catch (Exception e)
+                {
+                    return BadRequest(e.Message);
+                }
+
+                return Ok(_rating);
+            }
+            else
+            {
+                return BadRequest("User (id:" + rating.Author.UserId + ") already has submitted a rating for lesson id:" + rating.LessonId);
+            }
+
+        }
+
+
+        // PUT api/lesson/3/comment/13
+        [Authorize]
+        [Route("api/lesson/{lessonId}/rating/{id}")]
+        [HttpPut]
+        [ResponseType(typeof(LessonRating))]
+        public async Task<IHttpActionResult> PutLessonRating(int id, LessonRating rating)
+        {
+            LessonRating _rating = await db.LessonRatings.FindAsync(id);
+            _rating.Rating = rating.Rating;
+            _rating.Content = rating.Content ?? string.Empty;
+            _rating.LastModifDate = DateTime.Now;
+            _rating.Vers += 1;
+            db.Entry(_rating).State = EntityState.Modified;
+
+            // Update Lesson Rating with Average of Ratings on the same Lesson
+            IQueryable<int> _prevRatings = db.LessonRatings
+                                        .Where(r => r.LessonId.Equals(rating.LessonId) &&
+                                            !r.Id.Equals(id) &&
+                                            r.RecordState.Equals(Constants.RECORD_STATE_ACTIVE))
+                                        .Select(r => r.Rating);
+            List<int> _RatingsList = await _prevRatings.ToListAsync();
+            _RatingsList.Add(_rating.Rating);
+
+            Lesson _lesson = await db.Lessons.FindAsync(rating.LessonId);
+            _lesson.Rate = Math.Max((int)Math.Round(_RatingsList.Average()), 1);
+
+            //TODO: insert table fields for history and versioning
+            db.Entry(_lesson).State = EntityState.Modified;
+                
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+
+            return Ok(_rating);
+        }
+
+        // PUT api/lesson/3/comment/13/delete
+        [Authorize]
+        [Route("api/lesson/{lessonId}/rating/{id}/delete")]
+        [HttpPut]
+        [ResponseType(typeof(LessonRating))]
+        public async Task<IHttpActionResult> DeleteLessonRating(int id, LessonRating rating)
+        {
+            // Get the Rating on database
+            LessonRating _rating = await db.LessonRatings.FindAsync(id);
+            if (_rating == null)
+            {
+                return NotFound();
+            }
+            // Get the Lesson on database
+            Lesson _lesson = await db.Lessons.FindAsync(rating.LessonId);
+            if (_lesson == null)
+            {
+                return BadRequest("LessonId not valid:" + rating.LessonId);
+            }
+            if (_lesson.Author.UserId.Equals(rating.Author.UserId))
+            {
+                return BadRequest("Author's Lesson CANNOT delete his rating");
+            }
+            // enrich rating data
+            _rating.LastModifDate = DateTime.Now;
+            _rating.LastModifUser = rating.Author.UserName;
+            _rating.RecordState = Constants.RECORD_STATE_DELETED;
+            db.Entry(_rating).State = EntityState.Modified;
+
+            // Update Lesson Rating with Average of Ratings on the same Lesson, but le rating is going to be deleted
+            IQueryable<int> _prevRatings = db.LessonRatings
+                                        .Where(r => r.LessonId.Equals(rating.LessonId) &&
+                                            !r.Id.Equals(id) &&
+                                            r.RecordState.Equals(Constants.RECORD_STATE_ACTIVE))
+                                        .Select(r => r.Rating);
+            List<int> _RatingsList = await _prevRatings.ToListAsync();
+
+            _lesson.Rate = Math.Max((int)Math.Round(_RatingsList.Average()),1);
+            //TODO: insert table fields for history and versioning
+            db.Entry(_lesson).State = EntityState.Modified;
+                
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+
+            return Ok(_rating);
+
+
+        }
+
+
 
 
 
