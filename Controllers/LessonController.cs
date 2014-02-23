@@ -166,10 +166,12 @@ namespace Mag14.Controllers
             if (!String.IsNullOrEmpty(publishedOn))
                 lessons = lessons.Where(l => l.PublishDate.Equals(DateTime.Parse(publishedOn)));
             if (!String.IsNullOrEmpty(publishedBy))
-                lessons = lessons.Where(l => (l.Author.Name + l.Author.Surname).Contains(publishedBy));
+                lessons = lessons.Where(l => l.Author.UserName.Equals(publishedBy));
             
             // Only published lessons are returned
             lessons = lessons.Where(l => l.Published.Equals(Constants.LESSON_PUBLISHED));
+            // Only active lessons are returned
+            lessons = lessons.Where(l => l.RecordState.Equals(Constants.RECORD_STATE_ACTIVE));
 
             //if (startRow == 0)
             page.Count = lessons.Count();

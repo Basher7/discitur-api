@@ -37,6 +37,16 @@ namespace Mag14.discitur.Models
         public string Content { get; set; }
         public string Conclusion { get; set; }
         public int Published { get; set; }
+        [Required]
+        public DateTime CreationDate { get; set; }
+        [Required]
+        public DateTime LastModifDate { get; set; }
+        [Required]
+        public string LastModifUser { get; set; }
+        [Required]
+        public int Vers { get; set; }
+        [Required]
+        public int RecordState { get; set; }
 
         // Lazy loading of Tags
         public virtual ICollection<LessonTag> Tags { get; private set; }
