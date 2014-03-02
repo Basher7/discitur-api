@@ -12,6 +12,7 @@ using System.Web.Http;
 using System.Web.Http.Description;
 using Mag14.discitur.Models;
 using Mag14.Models;
+using System.Diagnostics;
 
 namespace Mag14.Controllers
 {
@@ -167,9 +168,15 @@ namespace Mag14.Controllers
                 lessons = lessons.Where(l => l.PublishDate.Equals(DateTime.Parse(publishedOn)));
             if (!String.IsNullOrEmpty(publishedBy))
                 lessons = lessons.Where(l => l.Author.UserName.Equals(publishedBy));
-            
-            // Only published lessons are returned
-            lessons = lessons.Where(l => l.Published.Equals(Constants.LESSON_PUBLISHED));
+
+
+            // Only published lessons are returned or private lessons (not published for user)
+            lessons = lessons.Where(l => 
+                l.Published.Equals(Constants.LESSON_PUBLISHED) ||
+                (l.Published.Equals(Constants.LESSON_NOT_PUBLISHED) && l.Author.UserName.Equals(publishedBy))
+                );
+
+            //lessons = lessons.Where(l => l.Published.Equals(Constants.LESSON_PUBLISHED));
             // Only active lessons are returned
             lessons = lessons.Where(l => l.RecordState.Equals(Constants.RECORD_STATE_ACTIVE));
 
@@ -209,37 +216,108 @@ namespace Mag14.Controllers
         }
 
         // PUT api/Lesson/5
+        [Authorize]
+        [ResponseType(typeof(Lesson))]
         public async Task<IHttpActionResult> PutLesson(int id, Lesson lesson)
         {
-            if (!ModelState.IsValid)
+            // Search for lesson by same version
+            IQueryable<Lesson> _lessons = db.Lessons
+                                        .Where(l => l.LessonId.Equals(lesson.LessonId) &&
+                                            l.Vers.Equals(lesson.Vers) &&
+                                            l.RecordState.Equals(Constants.RECORD_STATE_ACTIVE));
+            Lesson _lesson = await _lessons.FirstAsync();
+            if (_lesson == null)
             {
-                return BadRequest(ModelState);
+                return StatusCode(HttpStatusCode.Conflict);
             }
 
-            if (id != lesson.LessonId)
+            if (_lesson.Title != lesson.Title)
+                _lesson.Title = lesson.Title;
+            if (_lesson.Discipline != lesson.Discipline)
+                _lesson.Discipline = lesson.Discipline;
+
+            _lesson.School = lesson.School;
+            _lesson.Classroom = lesson.Classroom;
+            _lesson.Discipline = lesson.Discipline;
+            _lesson.Content = lesson.Content;
+            _lesson.Conclusion = lesson.Conclusion;
+            if (_lesson.PublishDate == null)
             {
-                return BadRequest();
+                _lesson.PublishDate = DateTime.Now;
             }
 
-            db.Entry(lesson).State = EntityState.Modified;
-
-            try
+            if (_lesson.Published != lesson.Published)
+                _lesson.Published = lesson.Published;
+            //_lesson.PublishDate = (_lesson.PublishDate == null ? DateTime.Now : _lesson.PublishDate);
+            if (_lesson.Published.Equals(Constants.LESSON_NOT_PUBLISHED) && lesson.Published.Equals(Constants.LESSON_PUBLISHED))
             {
-                await db.SaveChangesAsync();
+                _lesson.Published = _lesson.Published;
+                _lesson.PublishDate = DateTime.Now;
             }
-            catch (DbUpdateConcurrencyException)
+
+            foreach (LessonFeedback fb in lesson.FeedBacks)
             {
-                if (!LessonExists(id))
+                LessonFeedback mfb;
+                if (fb.LessonFeedbackId<=0)
                 {
-                    return NotFound();
+                    mfb = new LessonFeedback();
+                    mfb.LessonId = _lesson.LessonId;
+                    mfb.Feedback = fb.Feedback;
+                    mfb.Nature = fb.Nature;
+                    db.LessonFeedbacks.Add(mfb);
                 }
                 else
                 {
-                    throw;
+                    mfb = _lesson.FeedBacks.First(f => f.LessonFeedbackId.Equals(fb.LessonFeedbackId));
+                    if (mfb != null && mfb.Feedback != fb.Feedback)
+                    {
+                        mfb.Feedback = fb.Feedback;
+                        db.Entry(mfb).State = EntityState.Modified;
+                    }
                 }
             }
 
-            return StatusCode(HttpStatusCode.NoContent);
+
+            foreach (LessonTag tag in lesson.Tags)
+            {
+                LessonTag t;
+                if (tag.LessonId > 0 && tag.LessonId.Equals(_lesson.LessonId))
+                {
+                    if (tag.status.Equals("C"))
+                    {
+                        t = _lesson.Tags.First(_t => _t.LessonId.Equals(_lesson.LessonId) && _t.LessonTagName.Equals(tag.LessonTagName));
+                        _lesson.Tags.Remove(t);
+                    }
+                    else if (tag.status.Equals("A"))
+                    {
+                        t = new LessonTag();
+                        t.LessonId = _lesson.LessonId;
+                        t.LessonTagName = tag.LessonTagName;
+                        db.LessonTags.Add(t);
+                    }
+                }
+                else
+                    return BadRequest();//TODO: sistemare eccezioni
+            }
+
+
+
+            _lesson.LastModifUser = lesson.LastModifUser;
+            _lesson.LastModifDate = DateTime.Now;
+            _lesson.Vers += 1;
+
+            db.Entry(_lesson).State = EntityState.Modified;
+            try
+            {
+                db.Database.Log = s => Debug.WriteLine(s);
+                await db.SaveChangesAsync();
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+
+            return Ok(_lesson);
         }
 
         // POST api/Lesson

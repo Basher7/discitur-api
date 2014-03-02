@@ -12,6 +12,8 @@ namespace Mag14.discitur.Models
         [Key]
         [Column(Order = 1)]
         public int LessonId { get; set; }
+        [NotMapped]
+        public string status { get; set; }
         //[ForeignKey("LessonId")]
         //virtual public Lesson Lesson { get; set; }
 
