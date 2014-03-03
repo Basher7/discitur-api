@@ -231,6 +231,7 @@ namespace Mag14.Controllers
                 return StatusCode(HttpStatusCode.Conflict);
             }
 
+            
             if (_lesson.Title != lesson.Title)
                 _lesson.Title = lesson.Title;
             if (_lesson.Discipline != lesson.Discipline)
@@ -321,18 +322,36 @@ namespace Mag14.Controllers
         }
 
         // POST api/Lesson
+        [Authorize]
         [ResponseType(typeof(Lesson))]
         public async Task<IHttpActionResult> PostLesson(Lesson lesson)
         {
-            if (!ModelState.IsValid)
+
+            if (lesson.PublishDate == null)
             {
-                return BadRequest(ModelState);
+                lesson.PublishDate = DateTime.Now;
             }
+            User _user = await db.Users.FindAsync(lesson.Author.UserId);
+            lesson.Author = _user;
+            lesson.UserId = _user.UserId;
+            lesson.Vers = 1;
+            lesson.RecordState = Constants.RECORD_STATE_ACTIVE;
+            lesson.CreationDate = DateTime.Now;
+            lesson.LastModifDate = DateTime.Now;
 
             db.Lessons.Add(lesson);
-            await db.SaveChangesAsync();
 
-            return CreatedAtRoute("DefaultApi", new { id = lesson.LessonId }, lesson);
+            try
+            {
+                db.Database.Log = s => Debug.WriteLine(s);
+                await db.SaveChangesAsync();
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+
+            return Ok(lesson);
         }
 
         // DELETE api/Lesson/5

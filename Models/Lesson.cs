@@ -32,15 +32,15 @@ namespace Mag14.discitur.Models
         [ForeignKey("UserId")]
         virtual public User Author { get; set; }
         [Required]
-        public DateTime PublishDate { get; set; }
+        public DateTime? PublishDate { get; set; }
         [Required]
         public string Content { get; set; }
         public string Conclusion { get; set; }
         public int Published { get; set; }
         [Required]
-        public DateTime CreationDate { get; set; }
+        public DateTime? CreationDate { get; set; }
         [Required]
-        public DateTime LastModifDate { get; set; }
+        public DateTime? LastModifDate { get; set; }
         [Required]
         public string LastModifUser { get; set; }
         [Required]
