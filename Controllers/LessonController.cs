@@ -113,6 +113,91 @@ namespace Mag14.Controllers
             return retval;
         }
 
+        [NonAction]
+        private IQueryable<Lesson> SearchedLesson(
+            string keyword=null, 
+            bool inContent=false, 
+            string discipline=null, 
+            string school=null, 
+            string classroom=null, 
+            int rate=-1, 
+            string tags=null,
+            string publishedOn=null, 
+            string publishedBy=null
+            )
+        {
+            IQueryable<Lesson> lessons = db.Lessons;
+
+            if (!String.IsNullOrEmpty(keyword))
+            {
+                if (inContent)
+                    lessons = lessons.Where(l => l.Content.Contains(keyword) || l.Conclusion.Contains(keyword));
+                else
+                    lessons = lessons.Where(l => l.Title.Contains(keyword));
+
+            }
+            if (!String.IsNullOrEmpty(discipline))
+                lessons = lessons.Where(l => l.Discipline.Equals(discipline));
+            if (!String.IsNullOrEmpty(school))
+                lessons = lessons.Where(l => l.School.Equals(school));
+            if (!String.IsNullOrEmpty(classroom))
+                lessons = lessons.Where(l => l.Classroom.Equals(classroom));
+            if (rate > -1)
+                lessons = lessons.Where(l => l.Rate.Equals(rate));
+            if (!String.IsNullOrEmpty(tags))
+            {
+                foreach (string tag in GetQueryArrayParameters(tags))
+                {
+                    lessons = lessons.Where(l => l.Tags.Any(t => t.LessonTagName.Equals(tag)));
+                }
+
+                //lessons = lessons.Include(l => l.Tags);
+                //foreach (string tag in GetQueryArrayParameters(tags))
+                //{
+                //    var query = from l in lessons
+                //                select new { Lesson = l, Tag = l.Tags.Where(t => t.LessonTagName.Equals(tag)) };
+                //    lessons = query.AsQueryable().Select(p => p.Lesson);
+                //}
+
+            }
+            if (!String.IsNullOrEmpty(publishedOn))
+                lessons = lessons.Where(l => l.PublishDate.Equals(DateTime.Parse(publishedOn)));
+            if (!String.IsNullOrEmpty(publishedBy))
+                lessons = lessons.Where(l => l.Author.UserName.Equals(publishedBy));
+
+
+            // Only published lessons are returned or private lessons (not published for user)
+            lessons = lessons.Where(l =>
+                l.Published.Equals(Constants.LESSON_PUBLISHED) ||
+                (l.Published.Equals(Constants.LESSON_NOT_PUBLISHED) && l.Author.UserName.Equals(publishedBy))
+                );
+
+            //lessons = lessons.Where(l => l.Published.Equals(Constants.LESSON_PUBLISHED));
+            // Only active lessons are returned
+            lessons = lessons.Where(l => l.RecordState.Equals(Constants.RECORD_STATE_ACTIVE));
+
+            return lessons;
+        }
+
+
+        [HttpGet]
+//        public Dictionary<int, string> LastLessonsId(int lastNum)
+        public List<KeyValuePair<int, string>> LastLessonsId(int lastNum)
+        {
+            List<KeyValuePair<int, string>> result = new List<KeyValuePair<int, string>>();
+            db.Database.Log = s => Debug.WriteLine(s);
+            IQueryable<Lesson> lessons = db.Lessons;
+            lessons = lessons.Where(
+                l => l.Published.Equals(Constants.LESSON_PUBLISHED) &&
+                l.RecordState.Equals(Constants.RECORD_STATE_ACTIVE));
+            lessons = lessons.OrderBy("PublishDate DESC").Take(lastNum);
+            var results = lessons
+                .ToList()
+                .Select(l => new KeyValuePair<int, string>(l.LessonId,l.Title));
+
+            return results.ToList<KeyValuePair<int, string>>();
+        }
+
         [HttpGet]
         public async Task<PagedList<Lesson>> Search(
             string keyword=null, 
@@ -130,76 +215,28 @@ namespace Mag14.Controllers
             string orderDir="ASC")
         {
             PagedList<Lesson> page = new PagedList<Lesson>();
-            IQueryable<Lesson> lessons = db.Lessons;
 
-            if (!String.IsNullOrEmpty(keyword))
-            {
-                if (inContent)
-                    lessons = lessons.Where(l => l.Content.Contains(keyword) || l.Conclusion.Contains(keyword));
-                else
-                    lessons = lessons.Where(l => l.Title.Contains(keyword));
-
-            }
-            if (!String.IsNullOrEmpty(discipline))
-                lessons = lessons.Where(l => l.Discipline.Equals(discipline));
-            if (!String.IsNullOrEmpty(school))
-                lessons = lessons.Where(l => l.School.Equals(school));
-            if (!String.IsNullOrEmpty(classroom))
-                lessons = lessons.Where(l => l.Classroom.Equals(classroom));
-            if (rate>-1)
-                lessons = lessons.Where(l => l.Rate.Equals(rate));
-            if (!String.IsNullOrEmpty(tags))
-            {
-                foreach (string tag in GetQueryArrayParameters(tags))
-                {
-                    lessons = lessons.Where(l => l.Tags.Any(t => t.LessonTagName.Equals(tag)));
-                }
-                /*
-                lessons = lessons.Include(l => l.Tags);
-                foreach (string tag in GetQueryArrayParameters(tags))
-                {
-                    var query = from l in lessons
-                                select new { Lesson = l, Tag = l.Tags.Where(t => t.LessonTagName.Equals(tag))};
-                    lessons = query.AsQueryable().Select(p => p.Lesson);
-                }
-                */
-            }
-            if (!String.IsNullOrEmpty(publishedOn))
-                lessons = lessons.Where(l => l.PublishDate.Equals(DateTime.Parse(publishedOn)));
-            if (!String.IsNullOrEmpty(publishedBy))
-                lessons = lessons.Where(l => l.Author.UserName.Equals(publishedBy));
-
-
-            // Only published lessons are returned or private lessons (not published for user)
-            lessons = lessons.Where(l => 
-                l.Published.Equals(Constants.LESSON_PUBLISHED) ||
-                (l.Published.Equals(Constants.LESSON_NOT_PUBLISHED) && l.Author.UserName.Equals(publishedBy))
-                );
-
-            //lessons = lessons.Where(l => l.Published.Equals(Constants.LESSON_PUBLISHED));
-            // Only active lessons are returned
-            lessons = lessons.Where(l => l.RecordState.Equals(Constants.RECORD_STATE_ACTIVE));
+            IQueryable<Lesson> lessons = SearchedLesson(
+                keyword,
+                inContent,
+                discipline,
+                school,
+                classroom,
+                rate,
+                tags,
+                publishedOn,
+                publishedBy
+            );
 
             //if (startRow == 0)
             page.Count = lessons.Count();
             page.StartRow = startRow;
             page.PageSize = pageSize;
 
-            /*
-            if (orderDir.Equals("DESC"))
-                lessons = lessons.OrderByDescending(getLessonField(orderBy)).Skip(startRow).Take(pageSize).AsQueryable();
-            else
-                lessons = lessons.OrderBy(getLessonField(orderBy)).Skip(startRow).Take(pageSize).AsQueryable();
-            */
             lessons = lessons.OrderBy(orderBy + " " +orderDir).Skip(startRow).Take(pageSize);
-            //lessons = lessons.Skip(startRow).Take(pageSize);
-
             page.Records = await lessons.ToListAsync<Lesson>();
 
             return page;
-            //return await db.Lessons.Where(l => l.Discipline.Equals(discipline)).ToListAsync<Lesson>();
-
-            //return await db.Lessons.Where(l => l.Discipline.Equals(discipline)).ToListAsync<Lesson>();
         }
 
         // GET api/Lesson/5
