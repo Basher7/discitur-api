@@ -64,6 +64,8 @@ namespace Mag14.Controllers
         }
         */
 
+
+
         [HostAuthentication(DefaultAuthenticationTypes.ExternalBearer)]
         [Route("UserInfo")]
         public async Task<Mag14.discitur.Models.User> GetUserInfo()
@@ -330,10 +332,70 @@ namespace Mag14.Controllers
             return logins;
         }
 
+
         // POST api/Account/Register
         [AllowAnonymous]
         [Route("Register")]
-        public async Task<IHttpActionResult> Register(RegisterBindingModel model)
+        public async Task<IHttpActionResult> Register(Mag14.discitur.Models.Account model)
+        {
+
+            //Open the transaction
+            //using (var scope = db.Database)
+            //{ }
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            UserController uc = new UserController();
+            Mag14.discitur.Models.User discuser = new Mag14.discitur.Models.User
+            {
+                Name = model.Name,
+                Surname = model.Surname,
+                Email = model.Email,
+                UserName = model.UserName
+            };
+
+            db.Users.Add(discuser);
+
+
+            IdentityUser user = new IdentityUser
+            {
+                UserName = model.UserName
+            };
+
+            //IdentityResult result = await UserManager.CreateAsync(user, model.Password);
+            IdentityResult result = UserManager.Create(user, Codec.DecryptStringAES(model.Password));
+            IHttpActionResult errorResult = GetErrorResult(result);
+
+            if (errorResult != null)
+            {
+                return errorResult;
+            }
+
+
+            try
+            {
+                db.Database.Log = s => System.Diagnostics.Debug.WriteLine(s);
+                await db.SaveChangesAsync();
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+
+            return Ok(discuser);
+
+        }
+
+        
+        
+        // POST api/Account/Register
+        [AllowAnonymous]
+        //[Route("Register")]
+        [NonAction]
+        public async Task<IHttpActionResult> RegisterAccount(RegisterBindingModel model)
         {
             if (!ModelState.IsValid)
             {

@@ -16,7 +16,14 @@ namespace Mag14.discitur.Models
         public string Email { get; set; }
         [Required]
         public string UserName { get; set; }
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
         public string Picture { get; set; }
 
+    }
+
+    [NotMapped]
+    public class Account : User
+    {
+        public string Password { get; set; }
     }
 }

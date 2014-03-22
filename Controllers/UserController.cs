@@ -14,6 +14,7 @@ using Mag14.Models;
 
 namespace Mag14.Controllers
 {
+    [Authorize]
     public class UserController : ApiController
     {
         private DisciturContext db = new DisciturContext();
