@@ -20,6 +20,7 @@ using Mag14.Models;
 using Mag14.Result;
 using Mag14.Providers;
 using System.Web.Http.Description;
+using System.Net.Mail;
 
 namespace Mag14.Controllers
 {
@@ -164,6 +165,74 @@ namespace Mag14.Controllers
 
             return Ok();
         }
+
+
+        // POST api/Account/SetPassword
+        [AllowAnonymous]
+        [Route("ResetPassword")]
+        public async Task<IHttpActionResult> GetResetPassword(string UserName)
+        {
+            IdentityUser _user = await UserManager.FindByNameAsync(UserName);
+            if (_user == null)
+            {
+                return NotFound();
+            }
+
+            //1° modo:
+            /*
+            string hashedNewPassword = UserManager.PasswordHasher.HashPassword("prova");
+            UserStore<IdentityUser> store = new UserStore<IdentityUser>(db);
+            await store.SetPasswordHashAsync(_user, hashedNewPassword);
+            await store.UpdateAsync(_user);
+            */
+
+            // 2° modo
+            string npwd = Guid.NewGuid().ToString("d").Substring(1, 8);
+            UserManager.RemovePassword(_user.Id);
+            UserManager.AddPassword(_user.Id, npwd);
+
+
+            MailMessage mm = new MailMessage();
+            mm.From = new MailAddress("supporto@discitur.com");
+            mm.Subject = "Discitur - Reset Password";
+            mm.To.Add(new MailAddress("williamverdolini@hotmail.com"));
+            mm.Body = "<p>Ciao,<br>la sua nuova password è:<b>" + npwd + "</b> </p><p>La invitiamo a modificarla dalla pagina del suo Profilo.</p>";
+            mm.IsBodyHtml = true;
+            SmtpClient smtp = new SmtpClient();
+            try
+            {
+                smtp.Host = "smtp.gmail.com";
+                smtp.EnableSsl = true; //Depending on server SSL Settings true/false
+                System.Net.NetworkCredential NetworkCred = new System.Net.NetworkCredential();
+                NetworkCred.UserName = "william.verdolini@gmail.com";
+                NetworkCred.Password = "Liberta1";
+                //smtp.UseDefaultCredentials = true;
+                smtp.Credentials = NetworkCred;
+                smtp.Port = 587;//Specify your port No;
+                smtp.Send(mm);
+                return Ok();
+
+            }
+            catch
+            {
+                mm.Dispose();
+                smtp = null;
+                return BadRequest();
+            }    
+
+            //IdentityResult result = await UserManager.ChangePasswordAsync(_user.Id, _user.PasswordHash, "prova");
+            //IHttpActionResult errorResult = GetErrorResult(result);
+
+            //if (errorResult != null)
+            //{
+            //    return errorResult;
+            //}
+
+            //return Ok();
+        }
+        
+        
+        
 
         // POST api/Account/AddExternalLogin
         [Route("AddExternalLogin")]
@@ -373,7 +442,6 @@ namespace Mag14.Controllers
             {
                 return errorResult;
             }
-
 
             try
             {
