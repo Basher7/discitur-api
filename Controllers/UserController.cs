@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
 using System.Data.Entity.Infrastructure;
+using Microsoft.AspNet.Identity;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -38,6 +39,7 @@ namespace Mag14.Controllers
             return Ok(user);
         }
 
+        /*
         // PUT api/User/5
         public async Task<IHttpActionResult> PutUser(int id, User user)
         {
@@ -71,6 +73,52 @@ namespace Mag14.Controllers
 
             return StatusCode(HttpStatusCode.NoContent);
         }
+        */
+
+
+        // PUT api/User
+        [ResponseType(typeof(User))]
+        public async Task<IHttpActionResult> PutUser(User user)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            string userName = User.Identity.GetUserName();
+            User cUser =  await db.Users.Where(u => u.UserName.Equals(userName)).FirstAsync<Mag14.discitur.Models.User>();
+
+            if (cUser.UserId != user.UserId)
+            {
+                return BadRequest();
+            }
+
+            cUser.Email = user.Email;
+
+            db.Entry(cUser).State = EntityState.Modified;
+
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!UserExists(user.UserId))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return Ok(cUser);
+            //return StatusCode(HttpStatusCode.NoContent);
+        }
+
+
+
 
         // POST api/User
         [ResponseType(typeof(User))]
