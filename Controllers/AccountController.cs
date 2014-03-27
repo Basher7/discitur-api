@@ -21,6 +21,7 @@ using Mag14.Result;
 using Mag14.Providers;
 using System.Web.Http.Description;
 using System.Net.Mail;
+using AngulaDemo;
 
 namespace Mag14.Controllers
 {
@@ -134,8 +135,7 @@ namespace Mag14.Controllers
                 return BadRequest(ModelState);
             }
 
-            IdentityResult result = await UserManager.ChangePasswordAsync(User.Identity.GetUserId(), model.OldPassword,
-                model.NewPassword);
+            IdentityResult result = await UserManager.ChangePasswordAsync(User.Identity.GetUserId(), Codec.DecryptStringAES(model.OldPassword), Codec.DecryptStringAES(model.NewPassword));
             IHttpActionResult errorResult = GetErrorResult(result);
 
             if (errorResult != null)
@@ -191,44 +191,16 @@ namespace Mag14.Controllers
             UserManager.RemovePassword(_user.Id);
             UserManager.AddPassword(_user.Id, npwd);
 
-
-            MailMessage mm = new MailMessage();
-            mm.From = new MailAddress("supporto@discitur.com");
-            mm.Subject = "Discitur - Reset Password";
-            mm.To.Add(new MailAddress("williamverdolini@hotmail.com"));
-            mm.Body = "<p>Ciao,<br>la sua nuova password è:<b>" + npwd + "</b> </p><p>La invitiamo a modificarla dalla pagina del suo Profilo.</p>";
-            mm.IsBodyHtml = true;
-            SmtpClient smtp = new SmtpClient();
             try
             {
-                smtp.Host = "smtp.gmail.com";
-                smtp.EnableSsl = true; //Depending on server SSL Settings true/false
-                System.Net.NetworkCredential NetworkCred = new System.Net.NetworkCredential();
-                NetworkCred.UserName = "william.verdolini@gmail.com";
-                NetworkCred.Password = "Liberta1";
-                //smtp.UseDefaultCredentials = true;
-                smtp.Credentials = NetworkCred;
-                smtp.Port = 587;//Specify your port No;
-                smtp.Send(mm);
+                await MailProvider.GetMailprovider().SendForgottenPwdEmail("williamverdolini@hotmail.com", npwd);
                 return Ok();
-
             }
             catch
             {
-                mm.Dispose();
-                smtp = null;
                 return BadRequest();
-            }    
+            }
 
-            //IdentityResult result = await UserManager.ChangePasswordAsync(_user.Id, _user.PasswordHash, "prova");
-            //IHttpActionResult errorResult = GetErrorResult(result);
-
-            //if (errorResult != null)
-            //{
-            //    return errorResult;
-            //}
-
-            //return Ok();
         }
         
         
@@ -456,8 +428,6 @@ namespace Mag14.Controllers
             return Ok(discuser);
 
         }
-
-        
         
         // POST api/Account/Register
         [AllowAnonymous]
