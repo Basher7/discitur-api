@@ -1,9 +1,15 @@
-﻿using System;
+﻿using Mag14.Models;
+using Mag14.Providers;
+using Mag14.Result;
+using Microsoft.AspNet.Identity;
+using Microsoft.AspNet.Identity.EntityFramework;
+using Microsoft.Owin.Security;
+using Microsoft.Owin.Security.Cookies;
+using Microsoft.Owin.Security.OAuth;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Data;
 using System.Data.Entity;
-using System.Data.Entity.Infrastructure;
+using System.Linq;
 using System.Net.Http;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -11,17 +17,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 using System.Web.Http.ModelBinding;
-using Microsoft.AspNet.Identity;
-using Microsoft.AspNet.Identity.EntityFramework;
-using Microsoft.Owin.Security;
-using Microsoft.Owin.Security.Cookies;
-using Microsoft.Owin.Security.OAuth;
-using Mag14.Models;
-using Mag14.Result;
-using Mag14.Providers;
-using System.Web.Http.Description;
-using System.Net.Mail;
-using AngulaDemo;
+using System.Web.Security;
 
 namespace Mag14.Controllers
 {
@@ -48,23 +44,6 @@ namespace Mag14.Controllers
 
         public UserManager<IdentityUser> UserManager { get; private set; }
         public ISecureDataFormat<AuthenticationTicket> AccessTokenFormat { get; private set; }
-
-        /*
-        // GET api/Account/UserInfo
-        [HostAuthentication(DefaultAuthenticationTypes.ExternalBearer)]
-        [Route("UserInfo")]
-        public UserInfoViewModel GetUserInfo()
-        {
-            ExternalLoginData externalLogin = ExternalLoginData.FromIdentity(User.Identity as ClaimsIdentity);
-
-            return new UserInfoViewModel
-            {
-                UserName = User.Identity.GetUserName(),
-                HasRegistered = externalLogin == null,
-                LoginProvider = externalLogin != null ? externalLogin.LoginProvider : null
-            };
-        }
-        */
 
 
 
@@ -172,10 +151,30 @@ namespace Mag14.Controllers
         [Route("ResetPassword")]
         public async Task<IHttpActionResult> GetResetPassword(string UserName)
         {
+            Mag14.discitur.Models.User discuser;
             IdentityUser _user = await UserManager.FindByNameAsync(UserName);
             if (_user == null)
             {
-                return NotFound();
+                ModelState.AddModelError("", "UserName Not Found");
+                return BadRequest(ModelState);
+            }
+            else
+            {
+                try
+                {
+                    discuser = await db.Users.Where(u => u.UserName.Equals(UserName)).SingleAsync<Mag14.discitur.Models.User>();
+                }
+                catch (Exception e)
+                {
+                    ModelState.AddModelError("", e.Message);
+                    return BadRequest(ModelState);
+                }
+            }
+
+            if (discuser == null)
+            {
+                ModelState.AddModelError("", "UserName Not Found");
+                return BadRequest(ModelState);
             }
 
             //1° modo:
@@ -187,18 +186,20 @@ namespace Mag14.Controllers
             */
 
             // 2° modo
-            string npwd = Guid.NewGuid().ToString("d").Substring(1, 8);
+            //string npwd = Guid.NewGuid().ToString("d").Substring(1, 8);
+            string npwd = Membership.GeneratePassword(12, 0);
             UserManager.RemovePassword(_user.Id);
             UserManager.AddPassword(_user.Id, npwd);
 
             try
             {
-                await MailProvider.GetMailprovider().SendForgottenPwdEmail("williamverdolini@hotmail.com", npwd);
+                await MailProvider.GetMailprovider().SendForgottenPwdEmail(discuser.Email, npwd);
                 return Ok();
             }
-            catch
+            catch(Exception e)
             {
-                return BadRequest();
+                ModelState.AddModelError("", e.Message);
+                return BadRequest(ModelState);
             }
 
         }
@@ -379,16 +380,12 @@ namespace Mag14.Controllers
         [Route("Register")]
         public async Task<IHttpActionResult> Register(Mag14.discitur.Models.Account model)
         {
-
-            //Open the transaction
-            //using (var scope = db.Database)
-            //{ }
-
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
+            // Create and insert new Discitur User
             UserController uc = new UserController();
             Mag14.discitur.Models.User discuser = new Mag14.discitur.Models.User
             {
@@ -397,17 +394,16 @@ namespace Mag14.Controllers
                 Email = model.Email,
                 UserName = model.UserName
             };
-
             db.Users.Add(discuser);
 
-
+            // Create new Account 
             IdentityUser user = new IdentityUser
             {
                 UserName = model.UserName
             };
 
-            //IdentityResult result = await UserManager.CreateAsync(user, model.Password);
-            IdentityResult result = UserManager.Create(user, Codec.DecryptStringAES(model.Password));
+            string decryptedPwd = Codec.DecryptStringAES(model.Password);
+            IdentityResult result = UserManager.Create(user, decryptedPwd);
             IHttpActionResult errorResult = GetErrorResult(result);
 
             if (errorResult != null)
@@ -419,6 +415,15 @@ namespace Mag14.Controllers
             {
                 db.Database.Log = s => System.Diagnostics.Debug.WriteLine(s);
                 await db.SaveChangesAsync();
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+
+            try
+            {
+                await MailProvider.GetMailprovider().SendRegistrationEmail(discuser.Email, discuser.UserName, decryptedPwd);
             }
             catch (Exception e)
             {

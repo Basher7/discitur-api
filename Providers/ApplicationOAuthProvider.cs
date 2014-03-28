@@ -5,11 +5,11 @@ using Microsoft.Owin.Security.Cookies;
 using Microsoft.Owin.Security.OAuth;
 using System;
 using System.Collections.Generic;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using System.Security.Cryptography;
 using System.IO;
+using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Mag14.Providers
 {
@@ -17,8 +17,6 @@ namespace Mag14.Providers
     {
         private readonly string _publicClientId;
         private readonly Func<UserManager<IdentityUser>> _userManagerFactory;
-        //private ICryptoTransform Encryptor;
-
 
         public ApplicationOAuthProvider(string publicClientId, Func<UserManager<IdentityUser>> userManagerFactory)
         {
@@ -40,12 +38,7 @@ namespace Mag14.Providers
         {
             using (UserManager<IdentityUser> userManager = _userManagerFactory())
             {
-                //RijndaelManaged Crypto = new RijndaelManaged();
-
-                //string usr = Decrypt(context.UserName);
-                //string usr = Codec.DecryptStringAES(context.UserName);
-                //string pwd = Codec.DecryptStringAES(context.Password);
-
+                // Sent encrypted password to decrypt with the same algorithm
                 IdentityUser user = await userManager.FindAsync(context.UserName, Codec.DecryptStringAES(context.Password));
 
                 if (user == null)
