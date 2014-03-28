@@ -11,5 +11,7 @@ namespace Mag14.Models
         public const int RECORD_STATE_DELETED = 2;
         public const int LESSON_PUBLISHED = 1;
         public const int LESSON_NOT_PUBLISHED = 0;
+        public const string LESSON_SEARCH_ORDER_FIELD = "PublishDate";
+        public const string LESSON_SEARCH_ORDER_DIR = "DESC";
     }
 }

@@ -1,17 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
+﻿using Mag14.discitur.Models;
+using Mag14.Models;
+using Microsoft.AspNet.Identity;
 using System.Data.Entity;
 using System.Data.Entity.Infrastructure;
-using Microsoft.AspNet.Identity;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Description;
-using Mag14.discitur.Models;
-using Mag14.Models;
 
 namespace Mag14.Controllers
 {
@@ -38,43 +33,6 @@ namespace Mag14.Controllers
 
             return Ok(user);
         }
-
-        /*
-        // PUT api/User/5
-        public async Task<IHttpActionResult> PutUser(int id, User user)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            if (id != user.UserId)
-            {
-                return BadRequest();
-            }
-
-            db.Entry(user).State = EntityState.Modified;
-
-            try
-            {
-                await db.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!UserExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return StatusCode(HttpStatusCode.NoContent);
-        }
-        */
-
 
         // PUT api/User
         [ResponseType(typeof(User))]
@@ -114,11 +72,7 @@ namespace Mag14.Controllers
             }
 
             return Ok(cUser);
-            //return StatusCode(HttpStatusCode.NoContent);
         }
-
-
-
 
         // POST api/User
         [ResponseType(typeof(User))]

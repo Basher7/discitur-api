@@ -1,39 +1,21 @@
-﻿using System;
+﻿using Mag14.discitur.Models;
+using Mag14.Models;
+using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Data.Entity;
-using System.Data.Entity.Infrastructure;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Dynamic;
 using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Description;
-using Mag14.discitur.Models;
-using Mag14.Models;
-using System.Diagnostics;
 
 namespace Mag14.Controllers
 {
     public class LessonController : ApiController
     {
         private DisciturContext db = new DisciturContext();
-
-        /*
-        // GET api/Lesson
-        public IQueryable<Lesson> GetLessons()
-        {
-            return db.Lessons;
-        }
-        */
-
-        /*
-        public async Task<IEnumerable<Lesson>> GetLessons()
-        {
-            return await db.Lessons.ToListAsync<Lesson>();
-        }
-        */
 
         [NonAction]
         private Func<Lesson, Object> getLessonField(string fieldName)
@@ -61,13 +43,11 @@ namespace Mag14.Controllers
         [HttpGet]
         public async Task<List<string>> FindDiscipline(string disciplineQ)
         {
-            //List<string> disciplines = new List<string>();
             IQueryable<string> disciplines = db.Lessons
                                                 .Where(l => l.Discipline.Contains(disciplineQ))
                                                 .Select(l => l.Discipline).Distinct();
 
             return await disciplines.ToListAsync();
-            //var results = (from lesson in db.Lessons select lesson.Discipline).Distinct();
         }
 
         [HttpGet]
@@ -100,14 +80,12 @@ namespace Mag14.Controllers
             return await tags.ToListAsync();
         }
 
-
         [NonAction]
         private List<string> GetQueryArrayParameters(string arrayValuesQueryString)
         {
             var retval = new List<string>();
             foreach (var item in arrayValuesQueryString.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
             {
-                //var split = item.Split('=');
                 retval.Add(item);
             }
             return retval;
@@ -150,28 +128,17 @@ namespace Mag14.Controllers
                 {
                     lessons = lessons.Where(l => l.Tags.Any(t => t.LessonTagName.Equals(tag)));
                 }
-
-                //lessons = lessons.Include(l => l.Tags);
-                //foreach (string tag in GetQueryArrayParameters(tags))
-                //{
-                //    var query = from l in lessons
-                //                select new { Lesson = l, Tag = l.Tags.Where(t => t.LessonTagName.Equals(tag)) };
-                //    lessons = query.AsQueryable().Select(p => p.Lesson);
-                //}
-
             }
             if (!String.IsNullOrEmpty(publishedOn))
                 lessons = lessons.Where(l => l.PublishDate.Equals(DateTime.Parse(publishedOn)));
             if (!String.IsNullOrEmpty(publishedBy))
                 lessons = lessons.Where(l => l.Author.UserName.Equals(publishedBy));
 
-
             // Only published lessons are returned or private lessons (not published for user)
             lessons = lessons.Where(l =>
                 l.Published.Equals(Constants.LESSON_PUBLISHED) ||
                 (l.Published.Equals(Constants.LESSON_NOT_PUBLISHED) && l.Author.UserName.Equals(publishedBy))
                 );
-
             //lessons = lessons.Where(l => l.Published.Equals(Constants.LESSON_PUBLISHED));
             // Only active lessons are returned
             lessons = lessons.Where(l => l.RecordState.Equals(Constants.RECORD_STATE_ACTIVE));
@@ -179,9 +146,7 @@ namespace Mag14.Controllers
             return lessons;
         }
 
-
         [HttpGet]
-//        public Dictionary<int, string> LastLessonsId(int lastNum)
         public List<KeyValuePair<int, string>> LastLessonsId(int lastNum)
         {
             List<KeyValuePair<int, string>> result = new List<KeyValuePair<int, string>>();
@@ -190,7 +155,7 @@ namespace Mag14.Controllers
             lessons = lessons.Where(
                 l => l.Published.Equals(Constants.LESSON_PUBLISHED) &&
                 l.RecordState.Equals(Constants.RECORD_STATE_ACTIVE));
-            lessons = lessons.OrderBy("PublishDate DESC").Take(lastNum);
+            lessons = lessons.OrderBy(Constants.LESSON_SEARCH_ORDER_FIELD + " " + Constants.LESSON_SEARCH_ORDER_DIR).Take(lastNum);
             var results = lessons
                 .ToList()
                 .Select(l => new KeyValuePair<int, string>(l.LessonId,l.Title));
@@ -211,8 +176,8 @@ namespace Mag14.Controllers
             string publishedBy=null,
             int startRow=0,
             int pageSize=99999,
-            string orderBy="PublishDate",
-            string orderDir="ASC")
+            string orderBy = Constants.LESSON_SEARCH_ORDER_FIELD,
+            string orderDir = Constants.LESSON_SEARCH_ORDER_DIR)
         {
             PagedList<Lesson> page = new PagedList<Lesson>();
 
@@ -228,7 +193,6 @@ namespace Mag14.Controllers
                 publishedBy
             );
 
-            //if (startRow == 0)
             page.Count = lessons.Count();
             page.StartRow = startRow;
             page.PageSize = pageSize;
@@ -286,7 +250,6 @@ namespace Mag14.Controllers
 
             if (_lesson.Published != lesson.Published)
                 _lesson.Published = lesson.Published;
-            //_lesson.PublishDate = (_lesson.PublishDate == null ? DateTime.Now : _lesson.PublishDate);
             if (_lesson.Published.Equals(Constants.LESSON_NOT_PUBLISHED) && lesson.Published.Equals(Constants.LESSON_PUBLISHED))
             {
                 _lesson.Published = _lesson.Published;
@@ -315,7 +278,6 @@ namespace Mag14.Controllers
                 }
             }
 
-
             foreach (LessonTag tag in lesson.Tags)
             {
                 LessonTag t;
@@ -337,8 +299,6 @@ namespace Mag14.Controllers
                 else
                     return BadRequest();//TODO: sistemare eccezioni
             }
-
-
 
             _lesson.LastModifUser = lesson.LastModifUser;
             _lesson.LastModifDate = DateTime.Now;
@@ -407,6 +367,8 @@ namespace Mag14.Controllers
             return Ok(lesson);
         }
 
+        /**** Lesson Comments ****/
+
         [Route("api/lesson/{lessonId}/comments")]
         [HttpGet]
         public async Task<List<LessonComment>> GetCommentsByLessonId(int lessonId)
@@ -416,7 +378,7 @@ namespace Mag14.Controllers
             return await comments.ToListAsync();
         }
 
-        // POST api/lesson
+        // POST api/lesson/13/comment
         [Authorize]
         [Route("api/lesson/{lessonId}/comment")]
         [HttpPost]
@@ -443,11 +405,6 @@ namespace Mag14.Controllers
                 return BadRequest(e.Message);
             }
 
-            //if (!ModelState.IsValid)
-            //{
-            //    return BadRequest(ModelState);
-            //}
-
             db.LessonComments.Add(_comment);
             try
             {
@@ -459,9 +416,7 @@ namespace Mag14.Controllers
             }
 
             return Ok(_comment);
-            //return CreatedAtRoute("DefaultApi", new { id = comment.Id }, comment);
         }
-
 
         // PUT api/lesson/3/comment/13
         [Authorize]
@@ -529,8 +484,6 @@ namespace Mag14.Controllers
                 return BadRequest("comment linked by other user's comments");
             }
         }
-
-
 
         /**** Lesson Ratings ****/
 
@@ -611,8 +564,7 @@ namespace Mag14.Controllers
 
         }
 
-
-        // PUT api/lesson/3/comment/13
+        // PUT api/lesson/3/rating/13
         [Authorize]
         [Route("api/lesson/{lessonId}/rating/{id}")]
         [HttpPut]
@@ -653,7 +605,7 @@ namespace Mag14.Controllers
             return Ok(_rating);
         }
 
-        // PUT api/lesson/3/comment/13/delete
+        // PUT api/lesson/3/rating/13/delete
         [Authorize]
         [Route("api/lesson/{lessonId}/rating/{id}/delete")]
         [HttpPut]
@@ -707,8 +659,6 @@ namespace Mag14.Controllers
 
 
         }
-
-
 
 
 
