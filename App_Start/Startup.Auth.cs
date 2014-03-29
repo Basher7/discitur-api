@@ -2,10 +2,15 @@
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.EntityFramework;
 using Microsoft.Owin;
+using Microsoft.Owin.Cors;
 using Microsoft.Owin.Security.Cookies;
 using Microsoft.Owin.Security.OAuth;
 using Owin;
 using System;
+using System.Configuration;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Web.Cors;
 
 namespace Mag14
 {
@@ -57,6 +62,17 @@ namespace Mag14
         // For more information on configuring authentication, please visit http://go.microsoft.com/fwlink/?LinkId=301864
         public void ConfigureAuth(IAppBuilder app)
         {
+            //app.UseCors(Microsoft.Owin.Cors.CorsOptions.AllowAll);
+
+            bool isCorsEnabled = Convert.ToBoolean(ConfigurationManager.AppSettings["CORSEnabled"]);
+            string corsOrigin = ConfigurationManager.AppSettings["CORSOrigin"];
+            if (isCorsEnabled)
+            {
+                Microsoft.Owin.Cors.CorsOptions corsOptions = new Microsoft.Owin.Cors.CorsOptions();
+                corsOptions.PolicyProvider = new ConfigCorsPolicy(corsOrigin);
+                app.UseCors(corsOptions);
+            }
+
             // Enable the application to use a cookie to store information for the signed in user
             app.UseCookieAuthentication(new CookieAuthenticationOptions());
 
@@ -87,4 +103,29 @@ namespace Mag14
             //app.UseGoogleAuthentication();
         }
     }
+
+    public class ConfigCorsPolicy : ICorsPolicyProvider
+    {
+        private CorsPolicy _policy;
+
+        public ConfigCorsPolicy(string origin)
+        {
+            // Create a CORS policy.
+            _policy = new CorsPolicy
+            {
+                AllowAnyMethod = true,
+                AllowAnyHeader = true
+            };
+            // Add allowed origins.
+            _policy.Origins.Add(origin);
+        }
+
+        public Task<CorsPolicy> GetCorsPolicyAsync(IOwinRequest request)
+        {
+            return Task.FromResult(_policy);
+        }
+    }
+
+
+
 }

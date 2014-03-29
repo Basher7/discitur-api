@@ -2,8 +2,10 @@
 using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Web.Http;
+using System.Web.Http.Cors;
 
 namespace AngulaDemo
 {
@@ -60,8 +62,15 @@ namespace AngulaDemo
 
             // Use camel case for JSON data.
             //config.Formatters.JsonFormatter.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
-
-
+            /*
+            bool isCorsEnabled = Convert.ToBoolean(ConfigurationManager.AppSettings["CORSEnabled"]);
+            string corsOrigin = ConfigurationManager.AppSettings["CORSOrigin"];
+            if (isCorsEnabled)
+            {
+                var cors = new EnableCorsAttribute(corsOrigin, "*", "*");
+                config.EnableCors(cors);
+            }
+            */
         }
     }
 }
