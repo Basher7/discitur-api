@@ -117,7 +117,10 @@ namespace Mag14
                 AllowAnyHeader = true
             };
             // Add allowed origins.
-            _policy.Origins.Add(origin);
+            string [] origins = origin.Split(new string[]{";"}, StringSplitOptions.RemoveEmptyEntries);
+            foreach(string o in origins)
+                _policy.Origins.Add(o);
+            //_policy.Origins.Add(origin);
         }
 
         public Task<CorsPolicy> GetCorsPolicyAsync(IOwinRequest request)
