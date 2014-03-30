@@ -5,7 +5,6 @@ using Microsoft.Owin.Security.Cookies;
 using Microsoft.Owin.Security.OAuth;
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.IO;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -37,17 +36,6 @@ namespace Mag14.Providers
 
         public override async Task GrantResourceOwnerCredentials(OAuthGrantResourceOwnerCredentialsContext context)
         {
-            //CORS
-            // Add Access-Control-Allow-Origin header as enabling WebApi CORS will not enable it for this provider request
-            
-            //bool isCorsEnabled = Convert.ToBoolean(ConfigurationManager.AppSettings["CORSEnabled"]);
-            //string corsOrigin = ConfigurationManager.AppSettings["CORSOrigin"];
-            //if (isCorsEnabled)
-            //    context.OwinContext.Response.Headers.Add("Access-Control-Allow-Origin", new[] { corsOrigin });
-
-            //context.OwinContext.Response.Headers.Add("Access-Control-Allow-Origin", new[] { corsOrigin });
-            //context.OwinContext.Response.ContentType = "application/json";
-
             using (UserManager<IdentityUser> userManager = _userManagerFactory())
             {
                 // Sent encrypted password to decrypt with the same algorithm
