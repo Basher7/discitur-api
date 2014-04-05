@@ -145,7 +145,6 @@ namespace Mag14.Controllers
             return Ok();
         }
 
-
         // POST api/Account/SetPassword
         [AllowAnonymous]
         [Route("ResetPassword")]
@@ -204,9 +203,6 @@ namespace Mag14.Controllers
 
         }
         
-        
-        
-
         // POST api/Account/AddExternalLogin
         [Route("AddExternalLogin")]
         public async Task<IHttpActionResult> AddExternalLogin(AddExternalLoginBindingModel model)
@@ -380,57 +376,90 @@ namespace Mag14.Controllers
         [Route("Register")]
         public async Task<IHttpActionResult> Register(Mag14.discitur.Models.Account model)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            // Create and insert new Discitur User
-            UserController uc = new UserController();
-            Mag14.discitur.Models.User discuser = new Mag14.discitur.Models.User
-            {
-                Name = model.Name,
-                Surname = model.Surname,
-                Email = model.Email,
-                UserName = model.UserName
-            };
-            db.Users.Add(discuser);
-
-            // Create new Account 
-            IdentityUser user = new IdentityUser
-            {
-                UserName = model.UserName
-            };
-
-            string decryptedPwd = Codec.DecryptStringAES(model.Password);
-            IdentityResult result = UserManager.Create(user, decryptedPwd);
-            IHttpActionResult errorResult = GetErrorResult(result);
-
-            if (errorResult != null)
-            {
-                return errorResult;
-            }
-
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                // Create and insert new Discitur User
+                UserController uc = new UserController();
+                Mag14.discitur.Models.User discuser = new Mag14.discitur.Models.User
+                {
+                    Name = model.Name,
+                    Surname = model.Surname,
+                    Email = model.Email,
+                    UserName = model.UserName
+                };
+                db.Users.Add(discuser);
+
+                string activationKey = Guid.NewGuid().ToString("d").Substring(1, 10);
+
+                Mag14.discitur.Models.UserActivation userActivation = new Mag14.discitur.Models.UserActivation
+                {
+                    UserName = model.UserName,
+                    Key = activationKey
+                };
+                db.UserActivations.Add(userActivation);
+
+                // Create new Account 
+                IdentityUser user = new IdentityUser
+                {
+                    UserName = model.UserName
+                };
+
+                string decryptedPwd = Codec.DecryptStringAES(model.Password);
+                IdentityResult result = UserManager.Create(user, decryptedPwd);
+                IHttpActionResult errorResult = GetErrorResult(result);
+
+                if (errorResult != null)
+                {
+                    return errorResult;
+                }
+
                 db.Database.Log = s => System.Diagnostics.Debug.WriteLine(s);
                 await db.SaveChangesAsync();
-            }
-            catch (Exception e)
-            {
-                return BadRequest(e.Message);
-            }
 
-            try
-            {
-                await MailProvider.GetMailprovider().SendRegistrationEmail(discuser.Email, discuser.UserName, decryptedPwd);
-            }
-            catch (Exception e)
-            {
-                return BadRequest(e.Message);
-            }
+                //await MailProvider.GetMailprovider().SendRegistrationEmail(discuser.Email, discuser.UserName, decryptedPwd);
+                await MailProvider.GetMailprovider().SendActivationEmail(discuser.Email, discuser.UserName, decryptedPwd, activationKey, Request.Headers.Referrer.AbsoluteUri);
 
             return Ok(discuser);
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+
+        }
+
+
+        // POST api/Account/Activate
+        [AllowAnonymous]
+        [Route("Activate")]
+        public async Task<IHttpActionResult> Activate(Mag14.discitur.Models.UserActivation model)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                Mag14.discitur.Models.UserActivation result = await db.UserActivations.FindAsync(model.UserName);
+                if (result!= null && result.Key.Equals(model.Key))
+                    db.UserActivations.Remove(result);
+                else
+                    return BadRequest("Activation Key Not Valid");
+                db.Database.Log = s => System.Diagnostics.Debug.WriteLine(s);
+                await db.SaveChangesAsync();
+
+                return Ok();
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
 
         }
         
@@ -643,5 +672,6 @@ namespace Mag14.Controllers
         }
 
         #endregion
+
     }
 }

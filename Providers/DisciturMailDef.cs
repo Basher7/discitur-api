@@ -1,5 +1,6 @@
 ﻿using AngulaDemo;
 using System.Collections.Specialized;
+using System.Configuration;
 using System.IO;
 using System.Net.Mail;
 using System.Web;
@@ -7,12 +8,12 @@ using System.Web.UI.WebControls;
 
 namespace Mag14.Providers
 {
-    public class ForgottenPwdMailDef 
+    public class DisciturMailDef<T> where T : DisciturMailConfig
     {
         public string MailTemplate { get; set; }
         public ListDictionary Replacements { get; set; }
         private MailDefinition md { get; set; }
-        private ForgottenPwdMailConfig config { get; set; }
+        private T config { get; set; }
 
         public MailMessage CreateMailMessage(string strTo)
         {
@@ -25,9 +26,9 @@ namespace Mag14.Providers
             return md.CreateMailMessage(strTo, Replacements, body, new System.Web.UI.Control());
         } 
 
-        public ForgottenPwdMailDef(ListDictionary replacements) : base()
+        public DisciturMailDef(ListDictionary replacements)
         {
-            config = (ForgottenPwdMailConfig)ForgottenPwdMailConfig.GetConfiguration();
+            config = MailConfigProvider.GetConfiguration<T>();
             MailTemplate = config.Template;
             Replacements = replacements;
             md = new MailDefinition();

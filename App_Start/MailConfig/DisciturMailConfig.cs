@@ -6,20 +6,8 @@ using System.Web;
 
 namespace AngulaDemo
 {
-    public class RegistrationMailConfig : ConfigurationSection
+    public class DisciturMailConfig : ConfigurationSection
     {
-        public static RegistrationMailConfig GetConfiguration()
-        {
-            RegistrationMailConfig configuration = 
-                ConfigurationManager
-                .GetSection("RegistrationMail")
-                as RegistrationMailConfig;
-
-            if (configuration != null)
-                return configuration;
-            throw new Exception("RegistrationMail Config NOT Present");
-        }
-
         [ConfigurationProperty("template", IsRequired = false)]
         public string Template
         {
@@ -28,7 +16,6 @@ namespace AngulaDemo
                 return this["template"] as string;
             }
         }
-
 
         [ConfigurationProperty("from", IsRequired = false)]
         public string From

@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNet.Identity;
+﻿using Mag14.discitur.Models;
+using Mag14.Models;
+using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.EntityFramework;
 using Microsoft.Owin.Security;
 using Microsoft.Owin.Security.Cookies;
@@ -17,6 +19,8 @@ namespace Mag14.Providers
     {
         private readonly string _publicClientId;
         private readonly Func<UserManager<IdentityUser>> _userManagerFactory;
+        private DisciturContext db = new DisciturContext();
+
 
         public ApplicationOAuthProvider(string publicClientId, Func<UserManager<IdentityUser>> userManagerFactory)
         {
@@ -34,6 +38,7 @@ namespace Mag14.Providers
             _userManagerFactory = userManagerFactory;
         }
 
+        //[Mag14.Controllers.AccountController.JsonResultWebApiFilter]
         public override async Task GrantResourceOwnerCredentials(OAuthGrantResourceOwnerCredentialsContext context)
         {
             using (UserManager<IdentityUser> userManager = _userManagerFactory())
@@ -44,6 +49,16 @@ namespace Mag14.Providers
                 if (user == null)
                 {
                     context.SetError("invalid_grant", "The user name or password is incorrect.");
+                    //context.SetError("invalid_grant", "{name:'ciao',surname='bye'}");
+                    //context.SetError("disc.er01", "{\"description\": \"The user name or password is incorrect.\", \"params\":[]}");
+                    return;
+                }
+
+                UserActivation activation = await db.UserActivations.FindAsync(context.UserName);
+
+                if (activation != null)
+                {
+                    context.SetError("not_activated", "The account is not activated.");
                     return;
                 }
 

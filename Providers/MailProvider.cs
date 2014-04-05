@@ -11,41 +11,45 @@ namespace Mag14.Providers
     public class MailProvider
     {
         private static SmtpConfig smtpConfig;
-        private static ForgottenPwdMailConfig forgottnenMailConfig;
-        private static RegistrationMailConfig registrationMailConfig;
 
         public static MailProvider GetMailprovider() {
             MailProvider mp = new MailProvider();
             smtpConfig = (SmtpConfig)SmtpConfig.GetConfiguration();
-            forgottnenMailConfig = (ForgottenPwdMailConfig)ForgottenPwdMailConfig.GetConfiguration();
-            registrationMailConfig = (RegistrationMailConfig)RegistrationMailConfig.GetConfiguration();
             return mp;
         }
 
-        public async Task<bool> SendRegistrationEmail(string strTo, string username, string newPassword)
+        public async Task<bool> SendActivationEmail(string strTo, string username, string newPassword, string activationKey, string absoluteURL)
         {
             System.Collections.Specialized.ListDictionary replacements = new System.Collections.Specialized.ListDictionary();
+
+            ActivationMailConfig config = MailConfigProvider.GetConfiguration<ActivationMailConfig>();
+            string fromURL = string.IsNullOrEmpty(config.ActivationURL) ? absoluteURL : config.ActivationURL;
+
             replacements.Add("<%Username%>", username);
             replacements.Add("<%Password%>", newPassword);
+            replacements.Add("<%ActivationKey%>", activationKey);
+            replacements.Add("<%ActivationUrl%>", fromURL);
+            replacements.Add("<%ActivationPath%>", config.ActivationPath);
 
-            RegistrationMailDef md = new RegistrationMailDef(replacements);
+            DisciturMailDef<ActivationMailConfig> md = new DisciturMailDef<ActivationMailConfig>(replacements);
             MailMessage mm = md.CreateMailMessage(strTo);
 
-            return await this.SendEmail(mm, registrationMailConfig.From, null);
+            return await this.SendEmail(mm, config.From, null);
         }
 
         public async Task<bool> SendForgottenPwdEmail(string strTo, string newPassword)
         {
             System.Collections.Specialized.ListDictionary replacements = new System.Collections.Specialized.ListDictionary();
+            ForgottenPwdMailConfig config = MailConfigProvider.GetConfiguration<ForgottenPwdMailConfig>();
             replacements.Add("<%Password%>", newPassword);
 
-            ForgottenPwdMailDef md = new ForgottenPwdMailDef(replacements);
+            DisciturMailDef<ForgottenPwdMailConfig> md = new DisciturMailDef<ForgottenPwdMailConfig>(replacements);
             MailMessage mm = md.CreateMailMessage(strTo);
 
-            return await this.SendEmail(mm, forgottnenMailConfig.From, null);
+            return await this.SendEmail(mm, config.From, null);
         }
 
-        public async Task<bool> SendEmail(MailMessage mm, String strFrom, string strAttachmentPath)
+        private async Task<bool> SendEmail(MailMessage mm, String strFrom, string strAttachmentPath)
         {
             mm.From = new MailAddress(strFrom);
 
