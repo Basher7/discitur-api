@@ -54,7 +54,9 @@ namespace AngulaDemo
 
             config.Formatters.XmlFormatter.SupportedMediaTypes.Remove(
                 config.Formatters.XmlFormatter.SupportedMediaTypes.FirstOrDefault(t => t.MediaType == "application/xml"));
-
+            config.Formatters.XmlFormatter.SupportedMediaTypes.Remove(
+                config.Formatters.XmlFormatter.SupportedMediaTypes.FirstOrDefault(t => t.MediaType == "text/html"));
+            
             // Use camel case for JSON data.
             //config.Formatters.JsonFormatter.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
         }
