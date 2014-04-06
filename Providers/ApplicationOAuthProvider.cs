@@ -19,7 +19,7 @@ namespace Mag14.Providers
     {
         private readonly string _publicClientId;
         private readonly Func<UserManager<IdentityUser>> _userManagerFactory;
-        private DisciturContext db = new DisciturContext();
+        //private DisciturContext db = new DisciturContext();
 
 
         public ApplicationOAuthProvider(string publicClientId, Func<UserManager<IdentityUser>> userManagerFactory)
@@ -54,7 +54,7 @@ namespace Mag14.Providers
                     return;
                 }
 
-                UserActivation activation = await db.UserActivations.FindAsync(context.UserName);
+                UserActivation activation = await (new DisciturContext()).UserActivations.FindAsync(context.UserName);
 
                 if (activation != null)
                 {
