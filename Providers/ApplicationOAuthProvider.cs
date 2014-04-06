@@ -48,9 +48,8 @@ namespace Mag14.Providers
 
                 if (user == null)
                 {
-                    context.SetError("invalid_grant", "The user name or password is incorrect.");
-                    //context.SetError("invalid_grant", "{name:'ciao',surname='bye'}");
-                    //context.SetError("disc.er01", "{\"description\": \"The user name or password is incorrect.\", \"params\":[]}");
+                    context.SetError("discerr03", "The user name or password is incorrect.");
+                    //context.SetError("invalid_grant", "The user name or password is incorrect.");
                     return;
                 }
 
