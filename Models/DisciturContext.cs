@@ -4,7 +4,7 @@ using System.Data.Entity;
 using System.Linq;
 using System.Web;
 
-namespace Mag14.Models
+namespace Mag14.discitur.Models
 {
     public class DisciturContext : DbContext
     {

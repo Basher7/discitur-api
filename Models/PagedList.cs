@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 
-namespace Mag14.Models
+namespace Mag14.discitur.Models
 {
     public class PagedList<T>
     {
