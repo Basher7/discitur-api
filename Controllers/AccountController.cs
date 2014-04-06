@@ -1,4 +1,5 @@
-﻿using Mag14.Models;
+﻿using Mag14.discitur.Models;
+using Mag14.Models;
 using Mag14.Providers;
 using Mag14.Result;
 using Microsoft.AspNet.Identity;
@@ -383,6 +384,20 @@ namespace Mag14.Controllers
                     return BadRequest(ModelState);
                 }
 
+                //check if userName already exists
+                bool isUserNameUsed = await db.Users.AnyAsync(u => u.UserName.Equals(model.UserName));
+                if (isUserNameUsed)
+                    AddModelError(Constants.DISCITUR_ERROR_USERNAME_USED);
+                    //return BadDisciturRequest(Constants.DISCITUR_ERROR_USERNAME_USED);
+
+                bool isEmailUsed = await db.Users.AnyAsync(u => u.Email.Equals(model.Email));
+                if (isEmailUsed)
+                    AddModelError(Constants.DISCITUR_ERROR_EMAIL_USED);
+                    //return BadDisciturRequest(Constants.DISCITUR_ERROR_EMAIL_USED);
+
+                if(!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
                 // Create and insert new Discitur User
                 UserController uc = new UserController();
                 Mag14.discitur.Models.User discuser = new Mag14.discitur.Models.User
@@ -428,7 +443,7 @@ namespace Mag14.Controllers
             }
             catch (Exception e)
             {
-                return BadRequest(e.Message);
+                return BadDisciturRequest(e.Message);
             }
 
         }
@@ -463,6 +478,7 @@ namespace Mag14.Controllers
 
         }
         
+        /*
         // POST api/Account/Register
         [AllowAnonymous]
         //[Route("Register")]
@@ -489,6 +505,7 @@ namespace Mag14.Controllers
 
             return Ok();
         }
+        */
 
         // POST api/Account/RegisterExternal
         [OverrideAuthentication]
@@ -572,6 +589,17 @@ namespace Mag14.Controllers
             }
 
             return null;
+        }
+
+        private IHttpActionResult BadDisciturRequest(string errorCode)
+        {
+            AddModelError(errorCode);
+            return BadRequest(ModelState);
+        }
+
+        private void AddModelError(string errorCode)
+        {
+            ModelState.AddModelError(Constants.DISCITUR_ERRORS, errorCode);
         }
 
         private class ExternalLoginData

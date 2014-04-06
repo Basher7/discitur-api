@@ -11,6 +11,7 @@ using System.Web.Http.Description;
 namespace Mag14.Controllers
 {
     [Authorize]
+    [RoutePrefix("api/User")]
     public class UserController : ApiController
     {
         private DisciturContext db = new DisciturContext();
@@ -103,6 +104,34 @@ namespace Mag14.Controllers
             await db.SaveChangesAsync();
 
             return Ok(user);
+        }
+
+        // GET api/User/5
+        [AllowAnonymous]
+        [ResponseType(typeof(bool))]
+        [Route("anyEmail")]
+        [HttpGet]
+        public async Task<IHttpActionResult> isAnyEmail(string email)
+        {
+            try
+            {
+                return Ok(await db.Users.AnyAsync(u => u.Email.Equals(email)));
+            }
+            catch
+            {
+                return Ok(false);
+            }
+        }
+
+        private IHttpActionResult BadDisciturRequest(string errorCode)
+        {
+            AddModelError(errorCode);
+            return BadRequest(ModelState);
+        }
+
+        private void AddModelError(string errorCode)
+        {
+            ModelState.AddModelError(Constants.DISCITUR_ERRORS, errorCode);
         }
 
         protected override void Dispose(bool disposing)
