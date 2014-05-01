@@ -405,7 +405,8 @@ namespace Mag14.Controllers
                     Name = model.Name,
                     Surname = model.Surname,
                     Email = model.Email,
-                    UserName = model.UserName
+                    UserName = model.UserName,
+                    Picture = Constants.USER_DEFAULT_PICTURE
                 };
                 db.Users.Add(discuser);
 

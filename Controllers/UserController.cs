@@ -1,10 +1,15 @@
-﻿using Mag14.discitur.Models;
-using Mag14.Models;
+﻿using ImageResizer;
+using Mag14.discitur.Models;
 using Microsoft.AspNet.Identity;
+using System;
 using System.Data.Entity;
 using System.Data.Entity.Infrastructure;
+using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Http;
 using System.Web.Http.Description;
 
@@ -31,7 +36,6 @@ namespace Mag14.Controllers
             {
                 return NotFound();
             }
-
             return Ok(user);
         }
 
@@ -106,7 +110,7 @@ namespace Mag14.Controllers
             return Ok(user);
         }
 
-        // GET api/User/5
+        // GET api/User/anyEmail
         [AllowAnonymous]
         [ResponseType(typeof(bool))]
         [Route("anyEmail")]
@@ -121,6 +125,67 @@ namespace Mag14.Controllers
             {
                 return Ok(false);
             }
+        }
+
+        // POST api/User/Image
+        [Route("Image")]
+        [HttpPost]
+        public async Task<HttpResponseMessage> PostUserImage()
+        {
+            // Check if the request contains multipart/form-data.
+            if (Request.Content.IsMimeMultipartContent())
+            {
+                User user;
+                //var FormData = await Request.Content.ReadAsFormDataAsync();
+                try
+                {
+                    int id = int.Parse(HttpContext.Current.Request.Form["UserId"]);
+                    user = db.Users.Find(id);
+                }
+                catch {
+                    throw new HttpResponseException(HttpStatusCode.BadRequest);
+                }
+
+                var streamProvider = new MultipartMemoryStreamProvider();
+                streamProvider = await Request.Content.ReadAsMultipartAsync(streamProvider);
+
+                foreach (var item in streamProvider.Contents.Where(c => !string.IsNullOrEmpty(c.Headers.ContentDisposition.FileName)))
+                {   
+                    Stream stPictureSource = new MemoryStream(await item.ReadAsByteArrayAsync());
+                    Stream stThumbSource = new MemoryStream(await item.ReadAsByteArrayAsync());
+
+                    // Resize for Picture
+                    MemoryStream stPictureDest = new MemoryStream();
+                    var pictureSettings = new ResizeSettings
+                    {
+                        MaxWidth = Constants.USER_PICTURE_MAXWIDTH,
+                        MaxHeight = Constants.USER_PICTURE_MAXHEIGHT,
+                        Format = Constants.USER_PICTURE_FORMAT,
+                        Mode = FitMode.Crop
+                    };
+                    ImageBuilder.Current.Build(stPictureSource, stPictureDest, pictureSettings);
+
+                    // Resize for ThumbNail
+                    MemoryStream stThumbDest = new MemoryStream();
+                    var thumbSettings = new ResizeSettings
+                    {
+                        MaxWidth = Constants.USER_THUMB_MAXWIDTH,
+                        MaxHeight = Constants.USER_THUMB_MAXHEIGHT,
+                        Format = Constants.USER_THUMB_FORMAT,
+                        Mode = FitMode.Crop
+                    };
+                    ImageBuilder.Current.Build(stThumbSource, stThumbDest, thumbSettings);
+
+                    user.Picture = "data:image/gif;base64," + Convert.ToBase64String(stPictureDest.ToArray());
+                    user.Thumb = "data:image/gif;base64," + Convert.ToBase64String(stThumbDest.ToArray());
+                }
+                await db.SaveChangesAsync();
+                return Request.CreateResponse(HttpStatusCode.OK);
+            }
+            else{
+                throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
+            }
+
         }
 
         private IHttpActionResult BadDisciturRequest(string errorCode)
