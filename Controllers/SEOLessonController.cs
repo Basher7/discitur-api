@@ -1,10 +1,8 @@
 ﻿using Mag14.discitur.Models;
-using System;
-using System.Collections.Generic;
+using System.Data.Entity;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using System.Web;
 using System.Web.Mvc;
 
 namespace Mag14.Controllers
@@ -29,7 +27,8 @@ namespace Mag14.Controllers
             {
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
-            Lesson lesson = await db.Lessons.FindAsync(id);
+            // Only lesson not (logically) deleted are returned
+            Lesson lesson = await db.Lessons.FirstAsync(l => l.LessonId.Equals(id) && l.RecordState.Equals(Constants.RECORD_STATE_ACTIVE));
             if (lesson == null)
             {
                 return HttpNotFound();

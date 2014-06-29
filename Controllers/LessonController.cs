@@ -1,5 +1,4 @@
 ﻿using Mag14.discitur.Models;
-using Mag14.Models;
 using System;
 using System.Collections.Generic;
 using System.Data.Entity;
@@ -207,7 +206,8 @@ namespace Mag14.Controllers
         [ResponseType(typeof(Lesson))]
         public async Task<IHttpActionResult> GetLesson(int id)
         {
-            Lesson lesson = await db.Lessons.FindAsync(id);
+            // Only lesson not (logically) deleted are returned
+            Lesson lesson = await db.Lessons.FirstAsync(l => l.LessonId.Equals(id) && l.RecordState.Equals(Constants.RECORD_STATE_ACTIVE));
             if (lesson == null)
             {
                 return NotFound();
